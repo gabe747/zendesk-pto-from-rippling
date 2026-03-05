@@ -123,6 +123,21 @@ def slack_react(channel: str, timestamp: str, emoji: str, verbose=False):
         log(f"    Reacted :{emoji}: on {timestamp}", verbose_only=True, verbose=verbose)
 
 
+def slack_send(channel: str, text: str, verbose=False):
+    """Post a message to a Slack channel."""
+    resp = requests.post(
+        "https://slack.com/api/chat.postMessage",
+        headers=slack_headers(),
+        json={"channel": channel, "text": text},
+        timeout=10,
+    )
+    data = resp.json()
+    if not data.get("ok"):
+        log(f"    Slack send error: {data.get('error', 'unknown')}")
+    else:
+        log(f"    Posted summary to Slack", verbose_only=True, verbose=verbose)
+
+
 SICK_KEYWORDS = {"sick", "illness", "medical", "doctor", "flu", "covid", "unwell"}
 
 
@@ -610,10 +625,36 @@ def sync(dry_run=False, verbose=False, lookback_days=1):
 
     log(f"\nDone! {total_inserted} entries imported.")
 
-    # Step 8: React to Slack messages
+    # Step 8: Post summary to Slack
+    if total_inserted > 0:
+        _send_slack_summary(pto_requests, msg_results, verbose=verbose)
+
+    # Step 9: React to Slack messages
     _send_slack_reactions(msg_results, verbose=verbose)
 
     return 1 if had_errors else 0
+
+
+def _send_slack_summary(pto_requests: list, msg_results: dict, verbose=False):
+    """Post a summary message to Slack listing what was synced."""
+    lines = []
+    for req in pto_requests:
+        ts = req.get("slack_ts", "")
+        if msg_results.get(ts) != "success":
+            continue
+        start = datetime.strptime(req["start_date"], "%Y-%m-%d")
+        end = datetime.strptime(req["end_date"], "%Y-%m-%d")
+        start_fmt = start.strftime("%b %-d")
+        end_fmt = end.strftime("%b %-d")
+        leave_type = "Sick" if req["reason_id"] == SICK_REASON_ID else "PTO"
+        if req["start_date"] == req["end_date"]:
+            lines.append(f"• {req['name']}: {start_fmt} ({leave_type})")
+        else:
+            lines.append(f"• {req['name']}: {start_fmt} – {end_fmt} ({leave_type})")
+
+    if lines:
+        msg = "*Synced to Zendesk WFM:*\n" + "\n".join(lines)
+        slack_send(SLACK_CHANNEL_ID, msg, verbose=verbose)
 
 
 def _send_slack_reactions(msg_results: dict[str, str], verbose=False):
