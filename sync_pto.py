@@ -148,12 +148,12 @@ def parse_pto_message(message: dict) -> dict | None:
     # Clean Slack email formatting: <mailto:x@y.com|x@y.com> → x@y.com
     text = re.sub(r"<mailto:[^|]+\|([^>]+)>", r"\1", text)
 
-    # Extract fields
+    # Extract fields (support both "PTO Start" and Rippling's "Start Date")
     name_match = re.search(r"Name:\s*(.+)", text)
     email_match = re.search(r"Email:\s*(\S+@\S+)", text)
-    start_match = re.search(r"PTO Start:\s*(.+)", text)
-    end_match = re.search(r"PTO End:\s*(.+)", text)
-    type_match = re.search(r"Type:\s*(.+)", text)
+    start_match = re.search(r"(?:PTO Start|Start Date):\s*(.+)", text)
+    end_match = re.search(r"(?:PTO End|End Date):\s*(.+)", text)
+    type_match = re.search(r"(?:Type|Reason):\s*(.+)", text)
 
     if not (email_match and start_match and end_match):
         return None
@@ -191,7 +191,7 @@ def parse_pto_message(message: dict) -> dict | None:
 
 def _parse_human_date(date_str: str) -> str | None:
     """Parse 'March 18, 2026' → '2026-03-18'. Returns None on failure."""
-    for fmt in ("%B %d, %Y", "%B %d %Y", "%m/%d/%Y", "%Y-%m-%d"):
+    for fmt in ("%B %d, %Y", "%B %d %Y", "%m/%d/%Y", "%m/%d/%y", "%Y-%m-%d"):
         try:
             return datetime.strptime(date_str.strip(), fmt).strftime("%Y-%m-%d")
         except ValueError:
