@@ -603,7 +603,6 @@ def sync(dry_run=False, verbose=False, lookback_days=1):
 
     if not to_import:
         log("Nothing to import.")
-        # Still react to messages even if everything was already imported
         _send_slack_reactions(msg_results, verbose=verbose)
         return 0
 
