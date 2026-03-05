@@ -145,6 +145,12 @@ def parse_pto_message(message: dict) -> dict | None:
     if message.get("subtype"):
         return None
 
+    # Some apps (e.g. Rippling) put content in blocks, not the text field
+    for block in message.get("blocks", []):
+        block_text = block.get("text", {}).get("text", "")
+        if block_text:
+            text = text + "\n" + block_text
+
     # Clean Slack email formatting: <mailto:x@y.com|x@y.com> → x@y.com
     text = re.sub(r"<mailto:[^|]+\|([^>]+)>", r"\1", text)
 
