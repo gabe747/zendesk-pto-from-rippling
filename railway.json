@@ -1,0 +1,11 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS"
+  },
+  "deploy": {
+    "startCommand": "python sync_pto.py --verbose --lookback-days 2",
+    "restartPolicyType": "NEVER",
+    "cronSchedule": "0 13,15,17,19,21,23 * * 1-5"
+  }
+}
