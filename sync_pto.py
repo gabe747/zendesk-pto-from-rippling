@@ -141,8 +141,8 @@ def parse_pto_message(message: dict) -> dict | None:
     """
     text = message.get("text", "")
 
-    # Skip system messages (channel_join, etc.) and bot messages (our own summaries)
-    if message.get("subtype") or message.get("bot_id"):
+    # Skip system messages (channel_join, etc.)
+    if message.get("subtype"):
         return None
 
     # Clean Slack email formatting: <mailto:x@y.com|x@y.com> → x@y.com
