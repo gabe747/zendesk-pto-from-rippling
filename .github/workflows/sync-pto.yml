@@ -1,6 +1,8 @@
 name: Sync PTO from Slack to Zendesk WFM
 
 on:
+  push:  # TEMPORARY — remove after first successful run
+    branches: [main]
   schedule:
     # Run every 2 hours during business hours ET (Mon-Fri)
     # 13:00-23:00 UTC = 8am-6pm ET (EST) / 9am-7pm ET (EDT)
