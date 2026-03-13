@@ -494,9 +494,7 @@ def sync(dry_run=False, verbose=False, lookback_days=1):
     msg_results: dict[str, str] = {}  # slack_ts → "success" | "no_agent" | "skipped"
     skipped_no_agent = 0
     skipped_duplicate = 0
-    skipped_past = 0
     blocked_no_shift = 0
-    now_ts = int(datetime.now(timezone.utc).timestamp())
 
     for req in pto_requests:
         agent_id = resolve_from_wfm_map(req["email"], req["name"], wfm_map, verbose=verbose)
@@ -523,10 +521,6 @@ def sync(dry_run=False, verbose=False, lookback_days=1):
                 block_start = int(day_dt.timestamp())
                 block_end = int((day_dt + timedelta(days=1)).timestamp())
 
-                if block_end <= now_ts:
-                    skipped_past += 1
-                    continue
-
                 if (agent_id, block_start, block_end) in existing_timeoff:
                     log(f"  SKIP: Duplicate block for {req['name']} on {day_str}", verbose_only=True, verbose=verbose)
                     skipped_duplicate += 1
@@ -550,11 +544,6 @@ def sync(dry_run=False, verbose=False, lookback_days=1):
             for shift in matched_shifts:
                 start_time = shift["startTime"]
                 end_time = shift["endTime"]
-
-                if end_time <= now_ts:
-                    log(f"  SKIP: Shift already ended for {req['name']} on {day_str}", verbose_only=True, verbose=verbose)
-                    skipped_past += 1
-                    continue
 
                 if (agent_id, start_time, end_time) in existing_timeoff:
                     log(f"  SKIP: Duplicate for {req['name']} on {day_str}", verbose_only=True, verbose=verbose)
@@ -582,7 +571,6 @@ def sync(dry_run=False, verbose=False, lookback_days=1):
     log(f"  To import:  {len(to_import)}")
     log(f"  Blocked (no schedule yet):  {blocked_no_shift}")
     log(f"  Skipped (no WFM agent):     {skipped_no_agent}")
-    log(f"  Skipped (already ended):    {skipped_past}")
     log(f"  Skipped (duplicate):        {skipped_duplicate}")
 
     if dry_run:
@@ -632,7 +620,7 @@ def _send_slack_reactions(msg_results: dict[str, str], verbose=False):
             slack_react(SLACK_CHANNEL_ID, ts, "white_check_mark", verbose=verbose)
         elif result == "no_agent":
             slack_react(SLACK_CHANNEL_ID, ts, "warning", verbose=verbose)
-        # "skipped" = all duplicates/past — already processed, react with check
+        # "skipped" = all duplicates — already processed, react with check
         elif result == "skipped":
             slack_react(SLACK_CHANNEL_ID, ts, "white_check_mark", verbose=verbose)
 
