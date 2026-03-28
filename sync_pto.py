@@ -496,8 +496,17 @@ def sync(dry_run=False, verbose=False, lookback_days=1):
     skipped_duplicate = 0
     blocked_no_shift = 0
 
+    email_cache = {}
     for req in pto_requests:
         agent_id = resolve_from_wfm_map(req["email"], req["name"], wfm_map, verbose=verbose)
+
+        if not agent_id:
+            # Fallback: search Zendesk Support API directly by email.
+            # This handles retroactive PTO where shifts for past dates may
+            # not be returned by the WFM API, leaving the agent out of the map.
+            agent_id = resolve_email_to_agent_id(req["email"], email_cache, verbose=verbose)
+            if agent_id:
+                log(f"  Resolved {req['name']} via Support API fallback", verbose_only=True, verbose=verbose)
 
         if not agent_id:
             log(f"  SKIP: {req['name']} ({req['email']}) — no WFM agent")
