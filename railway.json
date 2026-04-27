@@ -6,6 +6,6 @@
   "deploy": {
     "startCommand": "python sync_pto.py --verbose --lookback-days 3",
     "restartPolicyType": "ON_FAILURE",
-    "cronSchedule": "0 13,17,1 * * 1-5"
+    "cronSchedule": "0 1,13,17 * * *"
   }
 }
